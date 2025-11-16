@@ -38,3 +38,5 @@ build/
 # Compiled binaries (without extension)
 cmd/sourcecontrol/sourcecontrol
 cmd/sourcecontrol/srcc
+sourcecontrol
+srcc
