@@ -45,6 +45,7 @@ func main() {
 	rootCmd.AddCommand(newBranchCmd())
 	rootCmd.AddCommand(newCheckoutCmd())
 	rootCmd.AddCommand(newLogCmd())
+	rootCmd.AddCommand(newShowCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
