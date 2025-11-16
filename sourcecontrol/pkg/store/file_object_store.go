@@ -10,6 +10,7 @@ import (
 	"github.com/utkarsh5026/SourceControl/pkg/objects"
 	"github.com/utkarsh5026/SourceControl/pkg/objects/blob"
 	"github.com/utkarsh5026/SourceControl/pkg/objects/commit"
+	tagobj "github.com/utkarsh5026/SourceControl/pkg/objects/tag"
 	"github.com/utkarsh5026/SourceControl/pkg/objects/tree"
 	"github.com/utkarsh5026/SourceControl/pkg/repository/scpath"
 )
@@ -258,7 +259,7 @@ func (f *FileObjectStore) createObjectFromHeader(data objects.ObjectContent) (ob
 	case objects.CommitType:
 		return commit.ParseCommit(fullData)
 	case objects.TagType:
-		return nil, fmt.Errorf("tag objects not yet implemented")
+		return tagobj.ParseTag(fullData)
 	default:
 		return nil, fmt.Errorf("unknown object type: %s", objType)
 	}
