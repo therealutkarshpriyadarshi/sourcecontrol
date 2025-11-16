@@ -58,6 +58,11 @@ func (sp SourcePath) ConfigPath() SourcePath {
 	return sp.Join(ConfigFile)
 }
 
+// TagsPath returns the path to the tags directory
+func (sp SourcePath) TagsPath() SourcePath {
+	return sp.Join(RefsDir, TagsDir)
+}
+
 // ObjectFilePath returns the path to an object file given its hash
 // Example: hash "abcdef..." returns ".source/objects/ab/cdef..."
 func (sp SourcePath) ObjectFilePath(hash string) SourcePath {
