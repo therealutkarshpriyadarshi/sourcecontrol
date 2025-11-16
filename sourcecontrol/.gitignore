@@ -34,3 +34,7 @@ Thumbs.db
 
 # Build artifacts
 build/
+
+# Compiled binaries (without extension)
+cmd/sourcecontrol/sourcecontrol
+cmd/sourcecontrol/srcc
