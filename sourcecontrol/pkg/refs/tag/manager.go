@@ -93,10 +93,13 @@ func (m *Manager) createLightweightTag(name string, objectSHA objects.ObjectHash
 
 // createAnnotatedTag creates an annotated tag
 func (m *Manager) createAnnotatedTag(name string, objectSHA objects.ObjectHash, opts *CreateOptions) error {
-	// For now, annotated tags are not fully implemented
-	// We'll create a lightweight tag with the same SHA
-	// TODO: Implement full annotated tag support with tag objects
-	return fmt.Errorf("annotated tags not yet fully implemented, use lightweight tags for now")
+	// Check if this is a signed tag request
+	if opts.Sign {
+		return fmt.Errorf("⚠️  signed tags are not yet implemented - GPG signing support coming soon")
+	}
+
+	// For annotated tags
+	return fmt.Errorf("⚠️  annotated tags are not yet implemented - please use lightweight tags for now")
 }
 
 // signContent signs the tag content with GPG
