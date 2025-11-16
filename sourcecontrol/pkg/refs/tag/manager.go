@@ -7,10 +7,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/utkarsh5026/SourceControl/pkg/common/fileops"
 	"github.com/utkarsh5026/SourceControl/pkg/config"
 	"github.com/utkarsh5026/SourceControl/pkg/objects"
+	"github.com/utkarsh5026/SourceControl/pkg/objects/commit"
+	tagobj "github.com/utkarsh5026/SourceControl/pkg/objects/tag"
 	"github.com/utkarsh5026/SourceControl/pkg/repository/refs"
 	"github.com/utkarsh5026/SourceControl/pkg/repository/scpath"
 	"github.com/utkarsh5026/SourceControl/pkg/repository/sourcerepo"
@@ -93,17 +96,104 @@ func (m *Manager) createLightweightTag(name string, objectSHA objects.ObjectHash
 
 // createAnnotatedTag creates an annotated tag
 func (m *Manager) createAnnotatedTag(name string, objectSHA objects.ObjectHash, opts *CreateOptions) error {
-	// For now, annotated tags are not fully implemented
-	// We'll create a lightweight tag with the same SHA
-	// TODO: Implement full annotated tag support with tag objects
-	return fmt.Errorf("annotated tags not yet fully implemented, use lightweight tags for now")
+	// Get tagger information from config
+	tagger, err := m.getTaggerInfo(opts)
+	if err != nil {
+		return fmt.Errorf("failed to get tagger info: %w", err)
+	}
+
+	// Determine the object type
+	objectType, err := m.getObjectType(objectSHA)
+	if err != nil {
+		return fmt.Errorf("failed to determine object type: %w", err)
+	}
+
+	// Build the tag object
+	builder := tagobj.NewTagBuilder().
+		ObjectHash(objectSHA).
+		ObjectType(objectType).
+		Name(name).
+		Tagger(tagger)
+
+	// Set message
+	if opts.Message != "" {
+		builder = builder.Message(opts.Message)
+	} else {
+		// Default message if none provided
+		builder = builder.Message(fmt.Sprintf("Tag %s", name))
+	}
+
+	// Handle signed tags
+	if opts.Sign {
+		signature, err := m.signTagContent(builder, opts.LocalUser)
+		if err != nil {
+			return fmt.Errorf("failed to sign tag: %w", err)
+		}
+		builder = builder.Signature(signature)
+	}
+
+	// Build the tag
+	tagObject, err := builder.Build()
+	if err != nil {
+		return fmt.Errorf("failed to build tag: %w", err)
+	}
+
+	// Write the tag object to the object store
+	tagObjectSHA, err := m.store.WriteObject(tagObject)
+	if err != nil {
+		return fmt.Errorf("failed to write tag object: %w", err)
+	}
+
+	// Create the tag reference pointing to the tag object
+	return m.createLightweightTag(name, tagObjectSHA)
 }
 
-// signContent signs the tag content with GPG
-func (m *Manager) signContent(content, keyID string) (string, error) {
+// getTaggerInfo gets tagger information from options or config
+func (m *Manager) getTaggerInfo(opts *CreateOptions) (*commit.CommitPerson, error) {
+	var name, email string
+
+	// Use options if provided
+	if opts.TaggerName != "" {
+		name = opts.TaggerName
+	} else {
+		// Fall back to config
+		entry := m.config.Get("user.name")
+		if entry != nil && entry.Value != "" {
+			name = entry.Value
+		} else {
+			name = "Unknown User"
+		}
+	}
+
+	if opts.TaggerEmail != "" {
+		email = opts.TaggerEmail
+	} else {
+		// Fall back to config
+		entry := m.config.Get("user.email")
+		if entry != nil && entry.Value != "" {
+			email = entry.Value
+		} else {
+			email = "unknown@example.com"
+		}
+	}
+
+	return commit.NewCommitPerson(name, email, time.Now())
+}
+
+// getObjectType determines the type of an object by reading it
+func (m *Manager) getObjectType(objectSHA objects.ObjectHash) (objects.ObjectType, error) {
+	obj, err := m.store.ReadObject(objectSHA)
+	if err != nil {
+		return "", fmt.Errorf("failed to read object: %w", err)
+	}
+	return obj.Type(), nil
+}
+
+// signTagContent signs the tag content with GPG
+func (m *Manager) signTagContent(builder *tagobj.TagBuilder, keyID string) (string, error) {
 	// TODO: Implement GPG signing
 	// For now, return an error indicating it's not implemented
-	return "", fmt.Errorf("GPG signing not yet implemented")
+	return "", fmt.Errorf("⚠️  GPG signing not yet implemented - please use annotated tags without signing for now")
 }
 
 // DeleteTag deletes a tag
@@ -174,9 +264,21 @@ func (m *Manager) ListTags(ctx context.Context, opts ...ListOption) ([]TagInfo, 
 
 		// Try to determine if it's an annotated tag by reading the object
 		if obj, err := m.store.ReadObject(sha); err == nil && obj.Type() == objects.TagType {
-			tagInfo.Type = Annotated
-			// Parse tag message (first line)
-			// TODO: Properly parse tag object content
+			// It's a tag object, so it's either annotated or signed
+			if tagObj, ok := obj.(*tagobj.Tag); ok {
+				if tagObj.IsSigned() {
+					tagInfo.Type = Signed
+				} else {
+					tagInfo.Type = Annotated
+				}
+				// Extract first line of message
+				lines := strings.Split(tagObj.Message, "\n")
+				if len(lines) > 0 {
+					tagInfo.Message = strings.TrimSpace(lines[0])
+				}
+			} else {
+				tagInfo.Type = Annotated
+			}
 		}
 
 		tags = append(tags, tagInfo)
@@ -226,8 +328,25 @@ func (m *Manager) GetTag(ctx context.Context, name string) (*Tag, error) {
 
 	// Check if it's an annotated tag
 	if obj, err := m.store.ReadObject(sha); err == nil && obj.Type() == objects.TagType {
-		tag.Type = Annotated
-		// TODO: Parse tag object to extract more details
+		// It's a tag object, parse it to get details
+		if tagObj, ok := obj.(*tagobj.Tag); ok {
+			if tagObj.IsSigned() {
+				tag.Type = Signed
+			} else {
+				tag.Type = Annotated
+			}
+			tag.Message = tagObj.Message
+			if tagObj.Tagger != nil {
+				tag.Tagger = &Person{
+					Name:  tagObj.Tagger.Name,
+					Email: tagObj.Tagger.Email,
+					When:  tagObj.Tagger.When.Time(),
+				}
+			}
+			tag.ObjectType = string(tagObj.ObjectType)
+		} else {
+			tag.Type = Annotated
+		}
 	}
 
 	return tag, nil
