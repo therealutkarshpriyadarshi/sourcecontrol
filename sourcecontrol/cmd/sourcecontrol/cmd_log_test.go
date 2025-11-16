@@ -252,4 +252,324 @@ func TestLogCommand(t *testing.T) {
 		// Note: We could capture stdout to verify order, but for now
 		// we're just testing that the command executes successfully
 	})
+
+	// Test new log enhancements
+	t.Run("log with graph visualization", func(t *testing.T) {
+		h := NewTestHelper(t)
+		repo := h.InitRepo()
+		h.Chdir()
+		defer os.Chdir(origDir)
+
+		// Setup and create commits
+		ctx := context.Background()
+		commitMgr := commitmanager.NewManager(repo)
+		if err := commitMgr.Initialize(ctx); err != nil {
+			t.Fatalf("failed to initialize commit manager: %v", err)
+		}
+
+		repoRoot := repo.WorkingDirectory()
+		indexMgr := index.NewManager(repoRoot)
+		if err := indexMgr.Initialize(); err != nil {
+			t.Fatalf("failed to initialize index: %v", err)
+		}
+		objectStore := store.NewFileObjectStore()
+		objectStore.Initialize(repo.WorkingDirectory())
+
+		// Create test commits
+		for i := 1; i <= 3; i++ {
+			filename := "graph_test" + string(rune('0'+i)) + ".txt"
+			h.WriteFile(filename, "content")
+
+			if err := indexMgr.Initialize(); err != nil {
+				t.Fatalf("failed to reinitialize index: %v", err)
+			}
+
+			if _, err := indexMgr.Add([]string{filename}, objectStore); err != nil {
+				t.Fatalf("failed to add file: %v", err)
+			}
+
+			if _, err := commitMgr.CreateCommit(ctx, commitmanager.CommitOptions{
+				Message: "Graph test commit " + string(rune('0'+i)),
+			}); err != nil {
+				t.Fatalf("failed to create commit: %v", err)
+			}
+		}
+
+		// Run log command with graph
+		cmd := newLogCmd()
+		cmd.SetArgs([]string{"--graph"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("log --graph command failed: %v", err)
+		}
+	})
+
+	t.Run("log with oneline format", func(t *testing.T) {
+		h := NewTestHelper(t)
+		repo := h.InitRepo()
+		h.Chdir()
+		defer os.Chdir(origDir)
+
+		// Setup and create commit
+		ctx := context.Background()
+		commitMgr := commitmanager.NewManager(repo)
+		if err := commitMgr.Initialize(ctx); err != nil {
+			t.Fatalf("failed to initialize commit manager: %v", err)
+		}
+
+		repoRoot := repo.WorkingDirectory()
+		indexMgr := index.NewManager(repoRoot)
+		if err := indexMgr.Initialize(); err != nil {
+			t.Fatalf("failed to initialize index: %v", err)
+		}
+		objectStore := store.NewFileObjectStore()
+		objectStore.Initialize(repo.WorkingDirectory())
+
+		h.WriteFile("oneline.txt", "content")
+		if _, err := indexMgr.Add([]string{"oneline.txt"}, objectStore); err != nil {
+			t.Fatalf("failed to add file: %v", err)
+		}
+
+		if _, err := commitMgr.CreateCommit(ctx, commitmanager.CommitOptions{
+			Message: "Oneline test",
+		}); err != nil {
+			t.Fatalf("failed to create commit: %v", err)
+		}
+
+		// Run log command with oneline
+		cmd := newLogCmd()
+		cmd.SetArgs([]string{"--oneline"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("log --oneline command failed: %v", err)
+		}
+	})
+
+	t.Run("log with custom format", func(t *testing.T) {
+		h := NewTestHelper(t)
+		repo := h.InitRepo()
+		h.Chdir()
+		defer os.Chdir(origDir)
+
+		// Setup and create commit
+		ctx := context.Background()
+		commitMgr := commitmanager.NewManager(repo)
+		if err := commitMgr.Initialize(ctx); err != nil {
+			t.Fatalf("failed to initialize commit manager: %v", err)
+		}
+
+		repoRoot := repo.WorkingDirectory()
+		indexMgr := index.NewManager(repoRoot)
+		if err := indexMgr.Initialize(); err != nil {
+			t.Fatalf("failed to initialize index: %v", err)
+		}
+		objectStore := store.NewFileObjectStore()
+		objectStore.Initialize(repo.WorkingDirectory())
+
+		h.WriteFile("format.txt", "content")
+		if _, err := indexMgr.Add([]string{"format.txt"}, objectStore); err != nil {
+			t.Fatalf("failed to add file: %v", err)
+		}
+
+		if _, err := commitMgr.CreateCommit(ctx, commitmanager.CommitOptions{
+			Message: "Format test",
+		}); err != nil {
+			t.Fatalf("failed to create commit: %v", err)
+		}
+
+		// Run log command with custom format
+		cmd := newLogCmd()
+		cmd.SetArgs([]string{"--format", "%h - %an - %s"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("log --format command failed: %v", err)
+		}
+	})
+
+	t.Run("log with pretty formats", func(t *testing.T) {
+		h := NewTestHelper(t)
+		repo := h.InitRepo()
+		h.Chdir()
+		defer os.Chdir(origDir)
+
+		// Setup and create commit
+		ctx := context.Background()
+		commitMgr := commitmanager.NewManager(repo)
+		if err := commitMgr.Initialize(ctx); err != nil {
+			t.Fatalf("failed to initialize commit manager: %v", err)
+		}
+
+		repoRoot := repo.WorkingDirectory()
+		indexMgr := index.NewManager(repoRoot)
+		if err := indexMgr.Initialize(); err != nil {
+			t.Fatalf("failed to initialize index: %v", err)
+		}
+		objectStore := store.NewFileObjectStore()
+		objectStore.Initialize(repo.WorkingDirectory())
+
+		h.WriteFile("pretty.txt", "content")
+		if _, err := indexMgr.Add([]string{"pretty.txt"}, objectStore); err != nil {
+			t.Fatalf("failed to add file: %v", err)
+		}
+
+		if _, err := commitMgr.CreateCommit(ctx, commitmanager.CommitOptions{
+			Message: "Pretty test",
+		}); err != nil {
+			t.Fatalf("failed to create commit: %v", err)
+		}
+
+		// Test different pretty formats
+		prettyFormats := []string{"oneline", "short", "medium", "full"}
+		for _, format := range prettyFormats {
+			cmd := newLogCmd()
+			cmd.SetArgs([]string{"--pretty", format})
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("log --pretty %s command failed: %v", format, err)
+			}
+		}
+	})
+
+	t.Run("log with grep filter", func(t *testing.T) {
+		h := NewTestHelper(t)
+		repo := h.InitRepo()
+		h.Chdir()
+		defer os.Chdir(origDir)
+
+		// Setup
+		ctx := context.Background()
+		commitMgr := commitmanager.NewManager(repo)
+		if err := commitMgr.Initialize(ctx); err != nil {
+			t.Fatalf("failed to initialize commit manager: %v", err)
+		}
+
+		repoRoot := repo.WorkingDirectory()
+		indexMgr := index.NewManager(repoRoot)
+		if err := indexMgr.Initialize(); err != nil {
+			t.Fatalf("failed to initialize index: %v", err)
+		}
+		objectStore := store.NewFileObjectStore()
+		objectStore.Initialize(repo.WorkingDirectory())
+
+		// Create commits with different messages
+		messages := []string{"Add feature", "Fix bug", "Add tests"}
+		for i, msg := range messages {
+			filename := "grep" + string(rune('0'+i+1)) + ".txt"
+			h.WriteFile(filename, "content")
+
+			if err := indexMgr.Initialize(); err != nil {
+				t.Fatalf("failed to reinitialize index: %v", err)
+			}
+
+			if _, err := indexMgr.Add([]string{filename}, objectStore); err != nil {
+				t.Fatalf("failed to add file: %v", err)
+			}
+
+			if _, err := commitMgr.CreateCommit(ctx, commitmanager.CommitOptions{
+				Message: msg,
+			}); err != nil {
+				t.Fatalf("failed to create commit: %v", err)
+			}
+		}
+
+		// Run log command with grep
+		cmd := newLogCmd()
+		cmd.SetArgs([]string{"--grep", "Add"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("log --grep command failed: %v", err)
+		}
+	})
+
+	t.Run("log with author filter", func(t *testing.T) {
+		h := NewTestHelper(t)
+		repo := h.InitRepo()
+		h.Chdir()
+		defer os.Chdir(origDir)
+
+		// Setup
+		ctx := context.Background()
+		commitMgr := commitmanager.NewManager(repo)
+		if err := commitMgr.Initialize(ctx); err != nil {
+			t.Fatalf("failed to initialize commit manager: %v", err)
+		}
+
+		repoRoot := repo.WorkingDirectory()
+		indexMgr := index.NewManager(repoRoot)
+		if err := indexMgr.Initialize(); err != nil {
+			t.Fatalf("failed to initialize index: %v", err)
+		}
+		objectStore := store.NewFileObjectStore()
+		objectStore.Initialize(repo.WorkingDirectory())
+
+		// Create commit
+		h.WriteFile("author.txt", "content")
+		if _, err := indexMgr.Add([]string{"author.txt"}, objectStore); err != nil {
+			t.Fatalf("failed to add file: %v", err)
+		}
+
+		if _, err := commitMgr.CreateCommit(ctx, commitmanager.CommitOptions{
+			Message: "Author test",
+		}); err != nil {
+			t.Fatalf("failed to create commit: %v", err)
+		}
+
+		// Run log command with author filter
+		cmd := newLogCmd()
+		cmd.SetArgs([]string{"--author", "Test"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("log --author command failed: %v", err)
+		}
+	})
+
+	t.Run("log with graph and oneline combined", func(t *testing.T) {
+		h := NewTestHelper(t)
+		repo := h.InitRepo()
+		h.Chdir()
+		defer os.Chdir(origDir)
+
+		// Setup
+		ctx := context.Background()
+		commitMgr := commitmanager.NewManager(repo)
+		if err := commitMgr.Initialize(ctx); err != nil {
+			t.Fatalf("failed to initialize commit manager: %v", err)
+		}
+
+		repoRoot := repo.WorkingDirectory()
+		indexMgr := index.NewManager(repoRoot)
+		if err := indexMgr.Initialize(); err != nil {
+			t.Fatalf("failed to initialize index: %v", err)
+		}
+		objectStore := store.NewFileObjectStore()
+		objectStore.Initialize(repo.WorkingDirectory())
+
+		// Create commits
+		for i := 1; i <= 3; i++ {
+			filename := "combined" + string(rune('0'+i)) + ".txt"
+			h.WriteFile(filename, "content")
+
+			if err := indexMgr.Initialize(); err != nil {
+				t.Fatalf("failed to reinitialize index: %v", err)
+			}
+
+			if _, err := indexMgr.Add([]string{filename}, objectStore); err != nil {
+				t.Fatalf("failed to add file: %v", err)
+			}
+
+			if _, err := commitMgr.CreateCommit(ctx, commitmanager.CommitOptions{
+				Message: "Combined test " + string(rune('0'+i)),
+			}); err != nil {
+				t.Fatalf("failed to create commit: %v", err)
+			}
+		}
+
+		// Run log command with graph and oneline
+		cmd := newLogCmd()
+		cmd.SetArgs([]string{"--graph", "--oneline"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("log --graph --oneline command failed: %v", err)
+		}
+	})
 }
