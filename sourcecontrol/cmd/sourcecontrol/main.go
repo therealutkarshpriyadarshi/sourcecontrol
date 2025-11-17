@@ -50,6 +50,8 @@ func main() {
 	rootCmd.AddCommand(newDescribeCmd())
 	rootCmd.AddCommand(newResetCmd())
 	rootCmd.AddCommand(newDiffCmd())
+	rootCmd.AddCommand(newBlameCmd())
+	rootCmd.AddCommand(newAnnotateCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
