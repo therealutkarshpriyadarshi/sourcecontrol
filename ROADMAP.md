@@ -182,7 +182,7 @@ SourceControl aims to be a fully-featured, Git-compatible version control system
   - Multiple commits
 
 ### 3.3 Developer Tools
-- [ ] **stash** - Temporarily save changes
+- [x] **stash** - Temporarily save changes
   - Stash save with message
   - Stash list
   - Stash apply/pop

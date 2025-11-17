@@ -633,8 +633,8 @@ func compareTrees2(objStore *store.FileObjectStore, tree1, tree2 *tree.Tree, pre
 
 // generateHunks generates unified diff hunks
 func generateHunks(oldContent, newContent []byte, contextLines int) []*DiffHunk {
-	oldLines := splitLines(oldContent)
-	newLines := splitLines(newContent)
+	oldLines := splitLinesDiff(oldContent)
+	newLines := splitLinesDiff(newContent)
 
 	// Simple line-by-line diff (Myers algorithm would be more sophisticated)
 	var hunks []*DiffHunk
@@ -719,7 +719,7 @@ func generateHunks(oldContent, newContent []byte, contextLines int) []*DiffHunk 
 }
 
 // splitLines splits content into lines
-func splitLines(content []byte) []string {
+func splitLinesDiff(content []byte) []string {
 	if len(content) == 0 {
 		return []string{}
 	}
