@@ -286,24 +286,6 @@ func findFileInTree(objStore *store.FileObjectStore, t *tree.Tree, pathParts []s
 	return nil, fmt.Errorf("file not found in tree")
 }
 
-// splitLines splits content into lines, preserving empty lines
-func splitLines(content []byte) []string {
-	if len(content) == 0 {
-		return []string{}
-	}
-
-	// Split by newline, handling both \n and \r\n
-	contentStr := string(content)
-	contentStr = strings.ReplaceAll(contentStr, "\r\n", "\n")
-	lines := strings.Split(contentStr, "\n")
-
-	// Remove the last empty line if content ends with newline
-	if len(lines) > 0 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
-	}
-
-	return lines
-}
 
 // normalizeForComparison normalizes a line for comparison
 func normalizeForComparison(line string, ignoreWhitespace bool) string {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/utkarsh5026/SourceControl/pkg/refs/branch"
 	"github.com/utkarsh5026/SourceControl/pkg/repository/scpath"
@@ -62,4 +63,23 @@ func getCurrentBranchName(repo *sourcerepo.SourceRepository) (string, error) {
 	}
 
 	return branchName, nil
+}
+
+// splitLines splits content into lines, preserving empty lines
+func splitLines(content []byte) []string {
+	if len(content) == 0 {
+		return []string{}
+	}
+
+	// Split by newline, handling both \n and \r\n
+	contentStr := string(content)
+	contentStr = strings.ReplaceAll(contentStr, "\r\n", "\n")
+	lines := strings.Split(contentStr, "\n")
+
+	// Remove the last empty line if content ends with newline
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+
+	return lines
 }

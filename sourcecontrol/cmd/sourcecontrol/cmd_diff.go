@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -716,20 +714,6 @@ func generateHunks(oldContent, newContent []byte, contextLines int) []*DiffHunk 
 	}
 
 	return hunks
-}
-
-// splitLines splits content into lines
-func splitLines(content []byte) []string {
-	if len(content) == 0 {
-		return []string{}
-	}
-
-	scanner := bufio.NewScanner(bytes.NewReader(content))
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	return lines
 }
 
 // readBlobContent reads content from a blob

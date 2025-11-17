@@ -11,6 +11,7 @@ var (
 	ColorBlueStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#00BFFF")).Bold(true)
 	ColorCyanStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF"))
 	ColorMagentaStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF00FF")).Italic(true)
+	ColorGrayStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#808080"))
 
 	// Status-specific styles
 	ModifiedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Bold(true)
@@ -86,6 +87,15 @@ func Cyan(s string) string {
 
 func Magenta(s string) string {
 	return ColorMagentaStyle.Render(s)
+}
+
+func Gray(s string) string {
+	return ColorGrayStyle.Render(s)
+}
+
+// Dim is an alias for Gray
+func Dim(s string) string {
+	return Gray(s)
 }
 
 // Layout rendering functions

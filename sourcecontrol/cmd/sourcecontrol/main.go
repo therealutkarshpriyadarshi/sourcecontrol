@@ -57,6 +57,14 @@ func main() {
 	rootCmd.AddCommand(newBlameCmd())
 	rootCmd.AddCommand(newAnnotateCmd())
 
+	// Phase 6: Developer Tools & Maintenance
+	rootCmd.AddCommand(newStashCmd())
+	rootCmd.AddCommand(newReflogCmd())
+	rootCmd.AddCommand(newCherryPickCmd())
+	rootCmd.AddCommand(newCleanCmd())
+	rootCmd.AddCommand(newGcCmd())
+	rootCmd.AddCommand(newFsckCmd())
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
