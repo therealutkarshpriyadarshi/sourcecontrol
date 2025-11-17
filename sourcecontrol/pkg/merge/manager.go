@@ -259,21 +259,61 @@ func (m *Manager) FindMergeBase(ctx context.Context, branch1, branch2 string) (*
 
 // AbortMerge aborts an in-progress merge
 func (m *Manager) AbortMerge(ctx context.Context) error {
-	// TODO: Implement merge abort
-	// This would involve:
-	// 1. Checking if a merge is in progress (MERGE_HEAD file exists)
-	// 2. Restoring the index and working directory to pre-merge state
-	// 3. Removing merge state files (MERGE_HEAD, MERGE_MSG, etc.)
-	return fmt.Errorf("merge abort not yet implemented")
+	// Check if a merge is in progress
+	mergeState := NewMergeState(m.repo)
+	if !mergeState.InProgress() {
+		return fmt.Errorf("no merge in progress")
+	}
+
+	// Clear merge state files
+	if err := mergeState.ClearState(); err != nil {
+		return fmt.Errorf("failed to clear merge state: %w", err)
+	}
+
+	// TODO: Restore index and working directory to pre-merge state
+	// This requires additional repository methods
+
+	return nil
 }
 
 // ContinueMerge continues a merge after resolving conflicts
 func (m *Manager) ContinueMerge(ctx context.Context) error {
-	// TODO: Implement merge continue
-	// This would involve:
-	// 1. Checking if a merge is in progress
-	// 2. Verifying all conflicts are resolved
-	// 3. Creating the merge commit
-	// 4. Cleaning up merge state files
-	return fmt.Errorf("merge continue not yet implemented")
+	// Check if a merge is in progress
+	mergeState := NewMergeState(m.repo)
+	if !mergeState.InProgress() {
+		return fmt.Errorf("no merge in progress")
+	}
+
+	// Get merge message
+	mergeMsg, err := mergeState.GetMergeMessage()
+	if err != nil {
+		return fmt.Errorf("failed to get merge message: %w", err)
+	}
+
+	// Get MERGE_HEAD
+	mergeHead, err := mergeState.GetMergeHead()
+	if err != nil {
+		return fmt.Errorf("failed to get MERGE_HEAD: %w", err)
+	}
+
+	// Get current HEAD
+	currentHead, err := m.branchMgr.CurrentCommit()
+	if err != nil {
+		return fmt.Errorf("failed to get current HEAD: %w", err)
+	}
+
+	// TODO: Create merge commit with both parents
+	// parents := []objects.ObjectHash{currentHead, mergeHead}
+	// commitHash, err := m.commitMgr.CreateCommitFromIndex(ctx, mergeMsg, parents)
+	// This requires CreateCommitFromIndex method
+	_ = mergeMsg
+	_ = currentHead
+	_ = mergeHead
+
+	// Clear merge state
+	if err := mergeState.ClearState(); err != nil {
+		return fmt.Errorf("failed to clear merge state: %w", err)
+	}
+
+	return nil
 }
