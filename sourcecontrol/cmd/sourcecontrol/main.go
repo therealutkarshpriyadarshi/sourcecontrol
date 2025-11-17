@@ -49,6 +49,8 @@ func main() {
 	rootCmd.AddCommand(newTagCmd())
 	rootCmd.AddCommand(newDescribeCmd())
 	rootCmd.AddCommand(newResetCmd())
+	rootCmd.AddCommand(newRevertCmd())
+
 	rootCmd.AddCommand(newDiffCmd())
 	rootCmd.AddCommand(newBlameCmd())
 	rootCmd.AddCommand(newAnnotateCmd())
