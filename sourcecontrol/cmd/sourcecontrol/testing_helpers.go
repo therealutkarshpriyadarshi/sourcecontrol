@@ -73,6 +73,25 @@ func (th *TestHelper) WriteFile(name, content string) string {
 	return filePath
 }
 
+// WriteBinaryFile creates a test file with binary content
+func (th *TestHelper) WriteBinaryFile(name string, content []byte) string {
+	th.t.Helper()
+
+	filePath := filepath.Join(th.tempDir, name)
+
+	// Create parent directories if needed
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		th.t.Fatalf("failed to create directory %s: %v", dir, err)
+	}
+
+	if err := os.WriteFile(filePath, content, 0644); err != nil {
+		th.t.Fatalf("failed to write file %s: %v", filePath, err)
+	}
+
+	return filePath
+}
+
 // Chdir changes to the test directory
 func (th *TestHelper) Chdir() {
 	th.t.Helper()
