@@ -52,6 +52,8 @@ func main() {
 	rootCmd.AddCommand(newRevertCmd())
 
 	rootCmd.AddCommand(newDiffCmd())
+	rootCmd.AddCommand(newMergeCmd())
+
 	rootCmd.AddCommand(newBlameCmd())
 	rootCmd.AddCommand(newAnnotateCmd())
 
