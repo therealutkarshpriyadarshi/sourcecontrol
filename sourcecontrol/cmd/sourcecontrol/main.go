@@ -49,8 +49,13 @@ func main() {
 	rootCmd.AddCommand(newTagCmd())
 	rootCmd.AddCommand(newDescribeCmd())
 	rootCmd.AddCommand(newResetCmd())
+	rootCmd.AddCommand(newRevertCmd())
+
 	rootCmd.AddCommand(newDiffCmd())
 	rootCmd.AddCommand(newMergeCmd())
+
+	rootCmd.AddCommand(newBlameCmd())
+	rootCmd.AddCommand(newAnnotateCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
