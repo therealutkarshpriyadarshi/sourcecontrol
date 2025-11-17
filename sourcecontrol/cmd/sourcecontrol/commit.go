@@ -12,8 +12,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/utkarsh5026/SourceControl/cmd/ui"
 	"github.com/utkarsh5026/SourceControl/pkg/commitmanager"
+	"github.com/utkarsh5026/SourceControl/pkg/graph"
+	filehistory "github.com/utkarsh5026/SourceControl/pkg/history"
 	"github.com/utkarsh5026/SourceControl/pkg/objects"
 	"github.com/utkarsh5026/SourceControl/pkg/objects/commit"
+	"github.com/utkarsh5026/SourceControl/pkg/repository/sourcerepo"
 )
 
 func newCommitCmd() *cobra.Command {
@@ -220,7 +223,22 @@ func displayCommitsAsTable(history []*commit.Commit) {
 
 // applyFilters applies all the requested filters to the commit history
 func applyFilters(history []*commit.Commit, opts *logOptions, repo interface{}) ([]*commit.Commit, error) {
-	filtered := make([]*commit.Commit, 0, len(history))
+	filtered := history
+
+	// File history filter (apply FIRST before other filters)
+	if opts.follow != "" {
+		sourceRepo, ok := repo.(*sourcerepo.SourceRepository)
+		if !ok {
+			return nil, fmt.Errorf("invalid repository type for file history")
+		}
+
+		walker := filehistory.NewFileHistoryWalker(sourceRepo)
+		fileFiltered, err := walker.FilterByFile(context.Background(), filtered, opts.follow)
+		if err != nil {
+			return nil, fmt.Errorf("failed to filter file history: %w", err)
+		}
+		filtered = fileFiltered
+	}
 
 	// Parse date filters
 	var sinceTime, untilTime time.Time
@@ -251,8 +269,9 @@ func applyFilters(history []*commit.Commit, opts *logOptions, repo interface{}) 
 		}
 	}
 
-	// Apply filters
-	for _, c := range history {
+	// Apply other filters to the file-filtered history
+	finalFiltered := make([]*commit.Commit, 0, len(filtered))
+	for _, c := range filtered {
 		// Author filter
 		if opts.author != "" {
 			authorMatch := strings.Contains(strings.ToLower(c.Author.Name), strings.ToLower(opts.author)) ||
@@ -276,10 +295,10 @@ func applyFilters(history []*commit.Commit, opts *logOptions, repo interface{}) 
 			continue
 		}
 
-		filtered = append(filtered, c)
+		finalFiltered = append(finalFiltered, c)
 	}
 
-	return filtered, nil
+	return finalFiltered, nil
 }
 
 // displayCommits displays commits based on the selected options
@@ -317,7 +336,13 @@ func displayCommits(history []*commit.Commit, opts *logOptions) error {
 
 // displayCommitsOneline shows commits in a compact one-line format
 func displayCommitsOneline(history []*commit.Commit, withGraph bool) error {
-	for i, c := range history {
+	if withGraph {
+		// Use the new graph renderer in compact mode
+		return displayCommitsGraph(history, true)
+	}
+
+	// No graph - simple oneline format
+	for _, c := range history {
 		commitHash, _ := c.Hash()
 		shortHash := commitHash.Short().String()
 
@@ -327,17 +352,9 @@ func displayCommitsOneline(history []*commit.Commit, withGraph bool) error {
 			message = message[:67] + "..."
 		}
 
-		if withGraph {
-			graphPrefix := buildGraphPrefix(history, i)
-			fmt.Printf("%s %s %s\n",
-				graphPrefix,
-				ui.Yellow(shortHash),
-				message)
-		} else {
-			fmt.Printf("%s %s\n",
-				ui.Yellow(shortHash),
-				message)
-		}
+		fmt.Printf("%s %s\n",
+			ui.Yellow(shortHash),
+			message)
 	}
 	return nil
 }
@@ -347,49 +364,18 @@ func displayCommitsGraph(history []*commit.Commit, compact bool) error {
 	fmt.Println(ui.Header(" Commit Graph "))
 	fmt.Println()
 
-	for i, c := range history {
-		commitHash, _ := c.Hash()
-		graphPrefix := buildGraphPrefix(history, i)
-
-		if compact {
-			// Compact format with graph
-			message := strings.Split(c.Message, "\n")[0]
-			if len(message) > 60 {
-				message = message[:57] + "..."
-			}
-			fmt.Printf("%s %s %s %s\n",
-				graphPrefix,
-				ui.Yellow(commitHash.Short().String()),
-				ui.Cyan(c.Author.Name),
-				message)
-		} else {
-			// Detailed format with graph
-			fmt.Printf("%s %s %s\n",
-				graphPrefix,
-				ui.Yellow(ui.IconCommit),
-				ui.Yellow(commitHash.String()))
-			fmt.Printf("%s %s %s <%s>\n",
-				buildGraphContinuation(history, i),
-				ui.Cyan(ui.IconAuthor),
-				ui.Blue(c.Author.Name),
-				ui.Blue(c.Author.Email))
-			fmt.Printf("%s %s %s\n",
-				buildGraphContinuation(history, i),
-				ui.Magenta(ui.IconDate),
-				ui.Magenta(c.Author.When.Time().Format(time.RFC1123)))
-			fmt.Printf("%s\n", buildGraphContinuation(history, i))
-
-			// Message with indentation
-			lines := strings.Split(c.Message, "\n")
-			for _, line := range lines {
-				fmt.Printf("%s     %s\n", buildGraphContinuation(history, i), line)
-			}
-
-			if i < len(history)-1 {
-				fmt.Printf("%s\n", buildGraphContinuation(history, i))
-			}
-		}
+	// Build the commit graph
+	builder := graph.NewGraphBuilder()
+	commitGraph, err := builder.Build(history)
+	if err != nil {
+		return fmt.Errorf("failed to build commit graph: %w", err)
 	}
+
+	// Render the graph
+	renderer := graph.NewRenderer(commitGraph)
+	output := renderer.Render(compact)
+
+	fmt.Print(output)
 	return nil
 }
 

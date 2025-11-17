@@ -78,7 +78,7 @@ func TestRevertCommand(t *testing.T) {
 			t.Fatalf("expected at least 2 commits, got %d", len(history))
 		}
 
-		secondCommitSHA := history[0].Hash()
+		secondCommitSHA, _ := history[0].Hash()
 
 		// Revert the second commit
 		revertCmd := newRevertCmd()
@@ -155,7 +155,7 @@ func TestRevertCommand(t *testing.T) {
 			t.Fatalf("failed to get history: %v", err)
 		}
 
-		secondCommitSHA := history[0].Hash()
+		secondCommitSHA, _ := history[0].Hash()
 
 		// Revert with --no-commit flag
 		revertCmd := newRevertCmd()
